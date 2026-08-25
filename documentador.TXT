@@ -1,0 +1,787 @@
+DOCUMENTADOR DEL SISTEMA
+INVENTARIO TECNOLOGICO PARA LA COORDINACION DE TELEMATICA
+FUNDACITE SUCRE
+
+Version documentada: 2026-08-24
+
+======================================================================
+1. OBJETIVO DEL SISTEMA
+======================================================================
+
+Este proyecto administra el inventario tecnologico de Fundacite Sucre.
+Permite registrar equipos, consultar el inventario, buscar por distintos
+criterios, editar los datos durante los controles tecnicos, asignar una
+oficina y un custodio, cargar varios equipos en una sola operacion,
+controlar roles de acceso y conservar auditoria de los cambios.
+
+El sistema esta dividido en dos aplicaciones principales:
+
+1. Backend: API REST desarrollada con FastAPI y Python.
+2. Frontend: SPA desarrollada con Vue 3 y Vite.
+3. Base de datos: PostgreSQL ejecutado mediante Docker.
+4. Orquestacion: Docker Compose.
+
+La arquitectura separa responsabilidades. Cada parte tiene una funcion:
+
+- models: representa las tablas de PostgreSQL.
+- schemas: valida los datos que entran y salen de la API.
+- controllers: contiene la logica de negocio y transacciones.
+- api/rutas: define las URLs HTTP.
+- core: contiene configuracion y seguridad.
+- db: crea el motor y las sesiones de base de datos.
+- views: contiene pantallas Vue.
+- stores: conserva el estado de autenticacion.
+- services: centraliza las llamadas HTTP.
+- router: protege y organiza la navegacion.
+
+======================================================================
+2. DISTRIBUCION DE CARPETAS
+======================================================================
+
+inventario-telematica/
+|
+|-- .env
+|-- .gitignore
+|-- README.md
+|-- documentador.TXT
+|-- docker-compose.yml
+|
+|-- backend/
+|   |-- Dockerfile
+|   |-- requirements.txt
+|   |-- app/
+|       |-- __init__.py
+|       |-- main.py
+|       |-- core/
+|       |   |-- __init__.py
+|       |   |-- config.py
+|       |   |-- security.py
+|       |-- db/
+|       |   |-- __init__.py
+|       |   |-- database.py
+|       |-- models/
+|       |   |-- __init__.py
+|       |   |-- models.py
+|       |-- schemas/
+|       |   |-- __init__.py
+|       |   |-- schemas.py
+|       |-- controllers/
+|       |   |-- __init__.py
+|       |   |-- auth_ctrl.py
+|       |   |-- equipos_ctrl.py
+|       |   |-- usuarios_ctrl.py
+|       |-- api/
+|           |-- __init__.py
+|           |-- dependencies.py
+|           |-- rutas/
+|               |-- __init__.py
+|               |-- auth.py
+|               |-- catalogos.py
+|               |-- equipos.py
+|               |-- usuarios.py
+|
+|-- frontend/
+    |-- Dockerfile
+    |-- package.json
+    |-- vite.config.js
+    |-- index.html
+    |-- src/
+        |-- main.js
+        |-- App.vue
+        |-- assets/global.css
+        |-- services/api.js
+        |-- stores/auth.js
+        |-- router/index.js
+        |-- components/Navbar.vue
+        |-- views/LoginView.vue
+        |-- views/InventarioView.vue
+        |-- views/FormularioEquipoView.vue
+        |-- views/UsuariosView.vue
+        |-- views/CargaMultipleView.vue
+
+NOTA: Los archivos __init__.py permiten que Python trate las carpetas
+como paquetes importables. No contienen logica de negocio.
+
+======================================================================
+3. INFRAESTRUCTURA Y DOCKER
+======================================================================
+
+3.1 Archivo .env
+
+Contiene variables centralizadas:
+
+- DB_USER: usuario de PostgreSQL.
+- DB_PASSWORD: password de PostgreSQL.
+- DB_HOST: nombre del servicio PostgreSQL dentro de Docker.
+- DB_PORT: puerto interno de PostgreSQL, 5432.
+- DB_NAME: nombre de la base.
+- SECRET_KEY: clave usada para firmar JWT.
+- ALGORITHM: algoritmo de firma, HS256.
+- ACCESS_TOKEN_EXPIRE_MINUTES: duracion del token.
+- VITE_API_BASE_URL: URL del backend consumida por Vue.
+- ADMIN_USERNAME y ADMIN_PASSWORD: cuenta inicial.
+
+El archivo .env no debe publicarse en Git porque contiene secretos.
+El archivo .gitignore ya contiene la regla .env.
+
+3.2 docker-compose.yml
+
+El servicio db_postgres usa postgres:15-alpine. El nombre del servicio
+es importante porque el backend resuelve DB_HOST=db_postgres dentro de
+la red Docker. El puerto interno es 5432.
+
+La publicacion local es 5433:5432. Esto significa:
+
+- Desde Windows se accede por localhost:5433.
+- Desde backend se accede por db_postgres:5432.
+- Se eligio 5433 porque el puerto local 5432 ya estaba ocupado.
+
+El volumen pgdata conserva los datos aunque se detengan los contenedores.
+
+El servicio backend_api:
+
+- Construye la imagen desde backend/Dockerfile.
+- Ejecuta uvicorn app.main:app.
+- Expone la API por localhost:8000.
+- Monta ./backend en /code para recarga en desarrollo.
+- Depende de db_postgres.
+
+El servicio frontend_vue:
+
+- Construye la imagen desde frontend/Dockerfile.
+- Ejecuta Vite en 0.0.0.0:5173.
+- Expone la SPA por localhost:5173.
+- Monta ./frontend en /app.
+- Mantiene un volumen separado para node_modules.
+- Ejecuta npm install antes de Vite para que el volumen de desarrollo
+  tenga las dependencias disponibles.
+
+Comandos principales:
+
+    docker compose up -d
+    docker compose ps
+    docker compose logs --tail=80 backend_api
+    docker compose logs --tail=80 frontend_vue
+    docker compose down
+
+3.3 Dockerfiles
+
+backend/Dockerfile usa Python 3.11-slim. Define WORKDIR /code, instala
+gcc y libpq-dev para PostgreSQL, copia requirements.txt, instala Python
+y finalmente copia el codigo.
+
+frontend/Dockerfile usa Node 20-alpine. Node 20 se eligio porque las
+versiones actuales de Vite/Rolldown no funcionaban con Node 18.
+Copia package.json, ejecuta npm install y copia el codigo Vue.
+
+======================================================================
+4. ARRANQUE DEL BACKEND: main.py
+======================================================================
+
+main.py es el punto de entrada de FastAPI.
+
+Las importaciones hacen lo siguiente:
+
+- FastAPI crea la aplicacion HTTP.
+- CORSMiddleware permite peticiones desde localhost:5173.
+- select permite consultar catlogos durante el seed inicial.
+- settings carga variables de entorno.
+- generar_hash protege el password inicial.
+- Base y engine permiten crear tablas.
+- SessionLocal abre una sesion para el seed.
+- models importa las clases SQLAlchemy.
+- Los routers incorporan las rutas de cada modulo.
+
+FastAPI se crea con titulo y version. Esos datos aparecen en /docs y
+/openapi.json.
+
+CORSMiddleware autoriza:
+
+- origen http://localhost:5173;
+- credenciales;
+- todos los metodos HTTP;
+- todos los headers.
+
+Los include_router agregan los endpoints bajo /api. Por ejemplo, el
+router de equipos tiene prefijo /equipos y al incluirlo con /api queda:
+
+    /api/equipos/
+
+initialize_database se ejecuta al iniciar FastAPI:
+
+1. Base.metadata.create_all crea tablas que no existan.
+2. preparar_esquema agrega columnas nuevas en bases existentes.
+3. Abre una sesion.
+4. Inserta roles si no existen.
+5. Inserta marcas venezolanas y la opcion Otro.
+6. Inserta tipos de equipos.
+7. Inserta las ubicaciones institucionales.
+8. Elimina Apple solo si no tiene equipos asociados.
+9. Elimina ubicaciones antiguas solo si no tienen equipos asociados.
+10. Crea o actualiza el hash del usuario admin.
+11. Hace commit.
+12. Cierra la sesion en finally.
+
+El seed es idempotente: ejecutarlo varias veces no duplica los registros.
+
+Las marcas iniciales son Acer, Asus, Brother, Canon, Dell, Epson, HP,
+Huawei, Lenovo, Samsung, Siragon, Polo Cientifico, VIT y Otro.
+
+Los tipos son Laptop, CPU, Servidor, Monitor, Impresora, Mouse, Raton,
+Cornetas, Webcams y VideoBeam.
+
+Las ubicaciones son:
+
+- Unidad de Telematica e Innovacion tecnologica.
+- Presidencia.
+- Direccion ejecutiva.
+- Talento Humano.
+- Administracion.
+- Bienes Nacionales.
+- Planificacion y Presupuesto.
+- Oficina de Atencion Al Ciudadano.
+- Prensa y Comunicaciones.
+- Unidad de Programas y Proyectos.
+- Deposito.
+
+health_check responde {"status": "ok"}. Sirve para comprobar que la API
+esta levantada, aunque no sustituye una prueba de la base de datos.
+
+======================================================================
+5. CONFIGURACION: core/config.py
+======================================================================
+
+Settings hereda de BaseSettings. Pydantic lee automaticamente las
+variables del archivo .env y las convierte a los tipos declarados.
+
+Los nombres en minuscula se relacionan con variables como DB_USER,
+DB_PASSWORD y SECRET_KEY por la configuracion de Pydantic Settings.
+
+database_url construye:
+
+    postgresql+psycopg2://usuario:password@host:puerto/base
+
+lru_cache hace que get_settings cree una sola instancia de Settings.
+Esto evita leer y procesar el .env repetidamente.
+
+settings es la instancia compartida por el resto del backend.
+
+======================================================================
+6. CONEXION: db/database.py
+======================================================================
+
+DeclarativeBase es la clase base de SQLAlchemy. Todas las tablas heredan
+de Base y quedan registradas en Base.metadata.
+
+create_engine crea el motor de PostgreSQL. pool_pre_ping verifica que
+una conexion del pool siga viva antes de reutilizarla.
+
+SessionLocal es una fabrica de sesiones. autocommit=False significa que
+el codigo decide cuando confirma. autoflush=False evita flush automatico
+inesperado.
+
+preparar_esquema aplica cambios compatibles en una base ya existente:
+
+- agrega marca_detalle;
+- agrega custodio;
+- agrega campos tecnicos de CPU y RAM;
+- agrega campos de movimientos;
+- agrega indices de claves foraneas y fechas.
+
+Las sentencias ADD COLUMN IF NOT EXISTS permiten reiniciar sin errores.
+
+get_db abre una sesion, la entrega con yield y la cierra siempre en
+finally. FastAPI la usa como dependencia en cada endpoint.
+
+======================================================================
+7. MODELOS SQLALCHEMY: models/models.py
+======================================================================
+
+Rol
+
+Tabla roles. Tiene id y nombre unico. Un rol puede estar asociado a
+muchos usuarios del sistema mediante la relacion usuarios.
+
+UsuarioSistema
+
+Representa una cuenta que puede iniciar sesion. Guarda username,
+password_hash y rol_id. Nunca guarda el password plano.
+La FK hacia roles usa ON DELETE RESTRICT para impedir eliminar un rol
+que tenga cuentas asociadas.
+
+Marca
+
+Catalogo de marcas. nombre es unico. Equipo referencia una marca.
+
+TipoEquipo
+
+Catalogo que clasifica el equipo. Incluye computadoras y perifericos.
+
+Ubicacion
+
+Catalogo de oficinas. Equipo referencia una ubicacion.
+
+Equipo
+
+Es la tabla central. Sus campos son:
+
+- id: clave primaria.
+- bien_nacional: identificador patrimonial unico.
+- serial: serial de fabrica, unico cuando se suministra.
+- mac: MAC opcional y unica.
+- modelo: modelo del equipo.
+- marca_detalle: nombre libre cuando la marca es Otro.
+- custodio: nombre de la persona como VARCHAR(150).
+- estado: Operativo, Dañado, En Reparación o Desincorporado.
+- observaciones: informacion adicional.
+- marca_id, tipo_id y ubicacion_id: claves foraneas.
+- creado_en: fecha generada por PostgreSQL.
+
+Las FK de marca y tipo usan RESTRICT para no eliminar catalogos usados.
+La ubicacion conserva RESTRICT en el modelo principal para proteger la
+trazabilidad de la oficina asignada.
+
+El CheckConstraint chk_estado_equipo impide estados distintos a los
+cuatro permitidos.
+
+EspecificacionesPC
+
+Amplia los equipos computacionales en relacion 1 a 1:
+
+- equipo_id es unico y referencia equipos.
+- cpu y ram son datos principales.
+- cpu_generacion, ram_cantidad_gb, ram_tipo y arquitectura son detalles.
+- sistema_operativo identifica el sistema instalado.
+- ram_cantidad_gb debe ser positiva cuando se informa.
+
+La relacion usa uselist=False. cascade all, delete-orphan elimina la
+extension cuando se elimina o desvincula el equipo.
+
+HistorialMovimiento
+
+Registra cambios de oficina y custodio:
+
+- ubicacion_anterior_id y ubicacion_nueva_id.
+- custodio_anterior y custodio_nuevo como texto.
+- fecha_movimiento.
+- motivo obligatorio.
+
+AuditoriaEquipo
+
+Guarda el ciclo de vida del equipo en JSON:
+
+- INGRESO al crear.
+- MODIFICACION al editar.
+- INTENTO_BORRADO cuando se solicita una baja.
+
+No tiene FK estricta a Equipo para conservar auditoria aun en situaciones
+excepcionales. datos_anteriores y datos_nuevos son snapshots JSON.
+
+======================================================================
+8. ESQUEMAS PYDANTIC: schemas/schemas.py
+======================================================================
+
+EspecificacionesPCCreate valida CPU, RAM y detalles tecnicos. gt=0 impide
+una cantidad de RAM negativa o cero.
+
+EquipoCreate valida la entrada de alta. Los limites max_length evitan
+textos descontrolados. marca_id, tipo_id y ubicacion_id son obligatorios.
+custodio es opcional y tiene maximo 150 caracteres.
+
+EquipoUpdate reutiliza exactamente el mismo contrato para editar.
+
+EquiposLoteCreate exige al menos un equipo y permite hasta 100 filas.
+
+CatalogoRef es la respuesta pequena de marcas, tipos y ubicaciones.
+
+EquipoResponse define la respuesta publica y no expone password ni
+campos internos de autenticacion.
+
+MovimientoResponse y AuditoriaResponse representan consultas historicas.
+
+UsuarioCreate se usa para crear cuentas de login. El password tiene
+longitud minima 8 y maxima 72, compatible con bcrypt.
+
+ConfigDict(from_attributes=True) permite construir respuestas desde
+objetos SQLAlchemy.
+
+======================================================================
+9. SEGURIDAD: core/security.py Y dependencies.py
+======================================================================
+
+security.py usa bcrypt directamente para evitar incompatibilidades entre
+passlib y versiones modernas del paquete bcrypt.
+
+verificar_password codifica el texto recibido y lo compara con el hash.
+generar_hash crea un salt y devuelve un hash bcrypt.
+
+crear_token_acceso crea claims:
+
+- sub: username.
+- rol: rol de la cuenta.
+- exp: fecha de expiracion.
+
+jwt.encode firma el token con SECRET_KEY y HS256.
+
+decodificar_token valida firma y expiracion. Si algo falla lanza
+ValueError.
+
+dependencies.py define OAuth2PasswordBearer con tokenUrl
+/api/auth/login. FastAPI extrae el Bearer de Authorization.
+
+VerificadorDeRoles recibe una lista, decodifica el JWT y lee rol.
+Si el token es invalido devuelve 401. Si el rol no esta permitido,
+devuelve 403. Esta dependencia se usa directamente en cada ruta sensible.
+
+get_db en dependencies.py sigue el mismo patron yield/finally para que
+cada request cierre su sesion.
+
+======================================================================
+10. AUTENTICACION Y ROLES
+======================================================================
+
+POST /api/auth/login recibe username y password como formulario
+application/x-www-form-urlencoded, porque es el formato OAuth2 de FastAPI.
+
+Los roles disponibles son:
+
+- SUPERADMIN: administra usuarios, crea, edita y desincorpora equipos.
+- COORDINADOR: crea, edita y aprueba desincorporaciones.
+- TECNICO: crea y edita durante los controles tecnicos.
+- CONSULTA: consulta el inventario sin modificarlo.
+
+El rol se incluye en el JWT y tambien se devuelve en la respuesta login.
+
+El usuario inicial se crea desde .env. Actualmente es admin con password
+admin123_cambiar. Debe cambiarse antes de usar en produccion.
+
+======================================================================
+11. CONTROLADOR DE EQUIPOS
+======================================================================
+
+equipos_ctrl.py concentra la logica y evita colocar SQL dentro de las
+rutas.
+
+_datos_equipo crea un snapshot pequeno para auditoria.
+
+_validar_ubicacion_estado hace la regla central:
+
+- Desincorporado solo puede estar en Deposito.
+- Deposito solo puede usarse con Desincorporado.
+- La ubicacion debe existir.
+
+crear_equipo sigue este orden:
+
+1. Valida estado y ubicacion.
+2. Crea models.Equipo.
+3. db.add registra el objeto en la sesion.
+4. db.flush obtiene el ID sin hacer commit.
+5. Si hay especificaciones, crea EspecificacionesPC con ese ID.
+6. Hace commit.
+7. Guarda auditoria INGRESO.
+8. Refresca el equipo.
+9. Devuelve el equipo.
+
+IntegrityError se convierte en ValueError si hay bien nacional, serial o
+MAC duplicado. La ruta lo transforma en HTTP 409.
+
+crear_equipos_lote recibe la lista completa. Repite el alta para cada
+fila, hace flush para cada ID, registra auditoria y ejecuta un solo
+commit. Si una fila falla, rollback revierte todo el lote, evitando que
+queden computadoras parcialmente registradas.
+
+actualizar_equipo:
+
+1. Valida la nueva oficina y estado.
+2. Captura datos anteriores.
+3. Copia solo campos editables.
+4. Actualiza especificaciones existentes en sitio para evitar colision
+   con la restriccion unica de la relacion 1 a 1.
+5. Crea especificaciones si antes no existian.
+6. Registra un movimiento si cambia oficina o custodio.
+7. Hace commit.
+8. Registra auditoria MODIFICACION.
+9. Refresca y devuelve el objeto.
+
+eliminar_equipo no borra fisicamente. Cambia el estado a Desincorporado,
+mueve la ubicacion a Deposito y registra INTENTO_BORRADO. Esto conserva
+la trazabilidad y obliga a usar una baja logica.
+
+======================================================================
+12. RUTAS DE EQUIPOS
+======================================================================
+
+POST /api/equipos/nuevo
+
+Crea un equipo. Roles permitidos: TECNICO, COORDINADOR y SUPERADMIN.
+
+POST /api/equipos/lote
+
+Recibe {"equipos": [...]} y crea hasta 100 equipos atomicos. Roles
+permitidos: TECNICO, COORDINADOR y SUPERADMIN.
+
+GET /api/equipos/
+
+Lista equipos ordenados por ID descendente. joinedload carga marca,
+tipo, ubicacion y especificaciones en la consulta para evitar N+1.
+Custodio no usa joinedload porque es una columna de texto.
+
+GET /api/equipos/{equipo_id}
+
+Obtiene un equipo individual para editarlo.
+
+PUT /api/equipos/{equipo_id}
+
+Edita un equipo. Roles permitidos: TECNICO, COORDINADOR y SUPERADMIN.
+
+DELETE /api/equipos/{equipo_id}
+
+No elimina fisicamente: desincorpora y mueve a Deposito. Solo
+SUPERADMIN puede invocar esta ruta directamente.
+
+GET /api/equipos/{equipo_id}/movimientos
+
+Devuelve cambios de oficina y custodio.
+
+GET /api/equipos/{equipo_id}/auditoria
+
+Devuelve ingreso, modificaciones e intentos de baja.
+
+======================================================================
+13. CATALOGOS Y USUARIOS
+======================================================================
+
+GET /api/catalogos devuelve marcas, tipos y ubicaciones para llenar
+selectores del frontend.
+
+GET /api/usuarios/roles devuelve roles. Solo SUPERADMIN.
+GET /api/usuarios devuelve cuentas. Solo SUPERADMIN.
+POST /api/usuarios crea cuentas. Solo SUPERADMIN.
+PATCH /api/usuarios/{id}/rol cambia el rol. Solo SUPERADMIN.
+
+El modulo de usuarios administra cuentas de login. El custodio de un
+equipo NO es una cuenta ni una tabla separada: es solo el nombre guardado
+en equipos.custodio.
+
+======================================================================
+14. FRONTEND: main.js, App.vue Y API
+======================================================================
+
+main.js importa Vue, App, router, Pinia y global.css. createApp monta
+la aplicacion, registra Pinia, registra Vue Router y monta en #app.
+
+App.vue solo renderiza RouterView. Esto permite que la URL determine la
+pantalla sin duplicar un layout raiz.
+
+services/api.js crea una instancia Axios con VITE_API_BASE_URL.
+
+Interceptor de request:
+
+- Lee token de localStorage.
+- Si existe, agrega Authorization: Bearer token.
+
+Interceptor de response:
+
+- 403 muestra Acceso Denegado.
+- 401 elimina token y rol.
+- 401 redirige a /login.
+- Otros errores se devuelven al componente para mostrar detalle.
+
+stores/auth.js conserva token, rol y estado cargando.
+
+iniciarSesion usa URLSearchParams porque OAuth2PasswordRequestForm lo
+requiere. Guarda token y rol en localStorage.
+
+leerRol puede decodificar el payload central del JWT con atob. El rol de
+la respuesta API tiene prioridad.
+
+cerrarSesion limpia estado reactivo y localStorage.
+
+======================================================================
+15. ROUTER Y NAVEGACION
+======================================================================
+
+/login es publico.
+/inventario requiere token.
+/equipos/nuevo permite TECNICO, COORDINADOR y SUPERADMIN.
+/equipos/carga-multiple permite TECNICO, COORDINADOR y SUPERADMIN.
+/equipos/:id/editar permite TECNICO, COORDINADOR y SUPERADMIN.
+/usuarios solo permite SUPERADMIN.
+
+beforeEach comprueba autenticacion y luego roles. Si no hay token,
+redirige a login. Si el rol no coincide, redirige al inventario.
+
+Navbar muestra enlaces segun rol:
+
+- Inventario para usuarios autenticados.
+- Nuevo equipo para tecnicos, coordinadores y superadmin.
+- Carga multiple para tecnicos, coordinadores y superadmin.
+- Usuarios y roles solo para superadmin.
+- Salir para cerrar sesion.
+
+======================================================================
+16. VISTAS PRINCIPALES
+======================================================================
+
+LoginView.vue
+
+Muestra usuario, password y boton de acceso. enviar llama al store,
+redirige al inventario si funciona y muestra mensaje si falla.
+
+InventarioView.vue
+
+Al montarse llama GET /equipos/. La propiedad computed
+ equiposFiltrados busca sin distinguir mayusculas en:
+
+- bien nacional;
+- MAC;
+- custodio o nombre;
+- modelo;
+- marca;
+- detalle de marca Otro;
+- oficina.
+
+El uso de String(valor || '') evita errores cuando MAC, custodio u otro
+valor sea null.
+
+La tabla muestra equipo, MAC, oficina/custodio, estado y acciones.
+Editar esta disponible para TECNICO, COORDINADOR y SUPERADMIN.
+Desincorporar abre el editor con query desincorporar=1 y solo aparece
+para COORDINADOR y SUPERADMIN.
+
+FormularioEquipoView.vue
+
+Sirve tanto para alta como edicion. Detecta route.params.id.
+
+Carga marcas, tipos y ubicaciones desde /catalogos.
+En edicion carga /equipos/{id} y copia solo IDs de relaciones y valores
+editables.
+
+marcaEsOtro muestra Nombre de la marca cuando se selecciona Otro.
+Ese texto se guarda en marca_detalle. Ejemplo: Djaua.
+
+requiereEspecificaciones identifica Laptop, CPU y Servidor.
+
+ubicacionesDisponibles implementa el IF:
+
+- estado Desincorporado: solo muestra Deposito.
+- cualquier otro estado: oculta Deposito.
+
+ajustarUbicacion selecciona Deposito automaticamente cuando el estado
+pasa a Desincorporado y limpia Deposito si se vuelve a otro estado.
+
+guardar construye un payload limpio, convierte IDs a numero, envia POST
+para alta o PUT para edicion y regresa al inventario cuando funciona.
+
+CargaMultipleView.vue
+
+Crea dos filas iniciales. El usuario puede agregar o quitar filas.
+Cada fila tiene sus propios bien nacional, serial, marca, oficina,
+custodio, tipo, CPU, RAM y estado.
+
+Al guardar, convierte IDs, omite especificaciones para perifericos y
+envia POST /api/equipos/lote. El backend confirma o revierte todo.
+
+UsuariosView.vue
+
+Permite al SUPERADMIN crear cuentas y cambiar sus roles. No administra
+custodios porque estos son nombres de texto dentro de Equipo.
+
+======================================================================
+17. REGLAS FUNCIONALES FINALES
+======================================================================
+
+Para registrar un equipo:
+
+1. Tener sesion iniciada.
+2. Tener rol TECNICO, COORDINADOR o SUPERADMIN.
+3. Informar bien nacional, marca, tipo y oficina.
+4. No repetir bien nacional, serial ni MAC.
+5. Si se usa Otro, escribir el nombre real de la marca.
+6. Custodio es opcional y se escribe como nombre.
+7. Desincorporado obliga a Deposito.
+8. Un estado operativo no puede usar Deposito.
+9. Laptop, CPU y Servidor pueden llevar CPU y RAM.
+10. La carga multiple registra todas las filas como una transaccion.
+
+Para editar:
+
+1. El equipo debe existir.
+2. El usuario debe tener TECNICO, COORDINADOR o SUPERADMIN.
+3. Se valida nuevamente la combinacion estado/oficina.
+4. Cambiar oficina o custodio crea historial de movimiento.
+5. La edicion crea auditoria MODIFICACION.
+
+Para desincorporar:
+
+1. Coordinador o superadmin abre Desincorporar.
+2. El formulario selecciona Desincorporado.
+3. La ubicacion queda en Deposito.
+4. El backend valida la regla.
+5. Se guarda auditoria y no se destruye el registro.
+
+======================================================================
+18. PRUEBAS REALIZADAS
+======================================================================
+
+Se valido Docker Compose y la resolucion de variables.
+
+Se construyeron las imagenes backend y frontend.
+
+Se comprobo:
+
+- GET /health devuelve {"status":"ok"}.
+- OpenAPI publica rutas de autenticacion, equipos, catalogos y usuarios.
+- Las tablas se crean en PostgreSQL.
+- Login admin devuelve SUPERADMIN.
+- Usuario tecnico puede crear y editar.
+- Tecnico no puede administrar usuarios: 403.
+- Tecnico no puede desincorporar directamente.
+- Lote de dos equipos funciona con oficinas y custodios distintos.
+- La marca Otro conserva valores como Djaua.
+- Deposito con Operativo devuelve 409.
+- Desincorporado con Deposito funciona.
+- Auditoria registra ingreso y modificacion.
+- Historial registra cambios de ubicacion y custodio.
+- Build de Vue termina correctamente.
+- La pantalla de carga multiple muestra filas y catalogos.
+
+======================================================================
+19. INICIO RAPIDO
+======================================================================
+
+Desde la carpeta inventario-telematica ejecutar:
+
+    docker compose up -d
+
+Abrir:
+
+    http://localhost:5173
+    http://localhost:8000/docs
+    http://localhost:8000/health
+
+Credenciales iniciales:
+
+    usuario: admin
+    password: admin123_cambiar
+
+Cambiar ADMIN_PASSWORD y SECRET_KEY antes de produccion.
+
+======================================================================
+20. MANTENIMIENTO Y RECOMENDACIONES
+======================================================================
+
+Para produccion se recomienda:
+
+- Cambiar todos los secretos del .env.
+- No usar --reload.
+- Añadir migraciones formales con Alembic.
+- Usar HTTPS.
+- Configurar backups de pgdata.
+- Añadir pruebas automatizadas con pytest.
+- Registrar el usuario del JWT en auditoria, no solo current_user.
+- Revisar los datos existentes antes de eliminar catalogos.
+- Evitar exponer credenciales en README de produccion.
+
+Este documento describe el estado implementado y las decisiones tomadas
+hasta la fecha indicada en la cabecera.
