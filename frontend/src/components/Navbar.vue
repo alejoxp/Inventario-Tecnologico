@@ -1,7 +1,14 @@
 <script setup>
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
+const router = useRouter()
+
+const cerrarSesion = () => {
+  auth.cerrarSesion()
+  router.push('/login')
+}
 </script>
 
 <template>
@@ -17,7 +24,7 @@ const auth = useAuthStore()
       </RouterLink>
       <RouterLink v-if="['TECNICO', 'COORDINADOR', 'SUPERADMIN'].includes(auth.rol)" to="/equipos/carga-multiple">Carga multiple</RouterLink>
       <RouterLink v-if="auth.rol === 'SUPERADMIN'" to="/usuarios">Usuarios y roles</RouterLink>
-      <button class="btn-secundario" type="button" @click="auth.cerrarSesion">Salir</button>
+      <button class="btn-secundario" type="button" @click="cerrarSesion">Cerrar sesión</button>
     </nav>
   </header>
 </template>
