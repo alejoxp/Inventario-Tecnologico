@@ -31,18 +31,25 @@ El primer arranque crea el usuario definido en `.env`:
 
 Cambiar estos valores antes de usar el sistema en un entorno real.
 
+## Documentación y Tutorial
+
+- Consulta [TUTORIAL_SISTEMA.txt](file:///c:/Users/Alejandro/Desktop/Nueva%20carpeta/inventario-telematica/TUTORIAL_SISTEMA.txt) para una guía paso a paso de uso y administración.
+- Consulta [documentador.TXT](file:///c:/Users/Alejandro/Desktop/Nueva%20carpeta/inventario-telematica/documentador.TXT) para la documentación técnica y arquitectónica completa.
+
 ## Funcionalidades
 
-- Autenticacion OAuth2 con JWT y roles.
-- Rol `TECNICO` para registrar y editar equipos durante los controles de Telematica.
-- Listado y busqueda por bien nacional o MAC.
-- Busqueda por bien nacional, MAC, nombre del custodio, oficina, marca y modelo.
-- Alta, edicion y eliminacion de equipos.
-- Carga múltiple de computadoras con oficina y custodio por fila.
-- Especificaciones de CPU y RAM para Laptop, CPU y Servidor.
-- PostgreSQL con relaciones, restricciones y persistencia Docker.
-- Historial de movimientos de ubicación/custodia y auditoría del ciclo de vida.
-- Custodio registrado como nombre de texto, sin tabla adicional de personas.
-- Ubicaciones institucionales configuradas para las unidades de Fundacite Sucre.
-- El custodio se registra directamente como nombre de texto en cada equipo.
-- Estados controlados: `Operativo`, `Dañado`, `En Reparación` y `Desincorporado`.
+- Autenticacion OAuth2 con JWT y roles (`SUPERADMIN`, `COORDINADOR`, `TECNICO`, `CONSULTA`).
+- Login institucional 100% responsivo para móviles, tablets y PCs.
+- Panel de búsqueda avanzada con **filtros combinables**:
+  - Filtro por **Oficina / Ubicación**.
+  - Filtro por **Custodio / Responsable**.
+  - Filtro por **Estado** (`Operativo`, `Dañado`, `En Reparación`, `Desincorporado`).
+  - Filtro por **Marca** (incluyendo soporte de marca libre "Otro").
+  - Búsqueda rápida por texto (Bien Nacional, Serial, MAC, Modelo).
+  - Botón de limpieza de filtros y contador reactivo en tiempo real.
+- Alta, edición y desincorporación controlada de equipos.
+- Carga múltiple de computadoras con oficina y custodio independiente por fila.
+- Especificaciones de hardware (CPU, generación, RAM, arquitectura, SO) para Laptop, CPU y Servidor.
+- PostgreSQL con relaciones, restricciones, triggers de auditoría inmutable y persistencia Docker (`pgdata`).
+- Historial automático de movimientos de ubicación y custodia.
+- Panel de gestión de usuarios y roles para el superadministrador.

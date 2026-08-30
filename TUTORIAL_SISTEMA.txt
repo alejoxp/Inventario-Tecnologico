@@ -1,0 +1,222 @@
+======================================================================
+  TUTORIAL DE USO Y PUESTA EN MARCHA DEL SISTEMA DE INVENTARIO
+  COORDINACION DE TELEMATICA - FUNDACITE SUCRE
+======================================================================
+Version: 2.0 (Actualizada con filtros avanzados y login responsivo)
+
+======================================================================
+1. DESCRIPCION DEL SISTEMA Y ARQUITECTURA
+======================================================================
+Este software es una plataforma integral desarrollada para el control
+patrimonial, custodia, trazabilidad y auditoria de los bienes
+tecnologicos de Fundacite Sucre.
+
+El sistema esta construido con:
+- Backend: FastAPI (Python 3.11) bajo arquitectura modular y limpia.
+- Frontend: Vue 3 (Composition API) con Vite, Pinia y Vue Router.
+- Base de Datos: PostgreSQL 15 con persistencia en volumenes Docker.
+- Contenedores: Docker y Docker Compose para ejecucion inmediata.
+
+======================================================================
+2. REQUISITOS PREVIOS
+======================================================================
+Para ejecutar el sistema solo necesitas:
+1. Docker Desktop instalado en tu computadora con Windows.
+2. Tener Docker Desktop abierto y en estado "Engine running".
+3. Un navegador web moderno (Google Chrome, Microsoft Edge, Mozilla Firefox).
+
+======================================================================
+3. COMO INICIAR EL SISTEMA PASO A PASO
+======================================================================
+
+Paso 1: Abrir la terminal
+-------------------------
+Abre PowerShell o el Simbolo del Sistema (CMD) y dirigete a la carpeta
+del proyecto:
+
+  cd "c:\Users\Alejandro\Desktop\Nueva carpeta\inventario-telematica"
+
+Paso 2: Encender los contenedores con Docker Compose
+---------------------------------------------------
+Ejecuta el siguiente comando para compilar y levantar todos los servicios:
+
+  docker compose up -d
+
+Veras en pantalla la confirmacion de arranque de:
+  - telematica_db (PostgreSQL)
+  - telematica_backend (FastAPI)
+  - telematica_frontend (Vue 3 / Vite)
+
+Paso 3: Verificar que todo este corriendo
+-----------------------------------------
+Ejecuta:
+
+  docker compose ps
+
+Los 3 servicios deben indicar estado "Up".
+
+Paso 4: Abrir las aplicaciones en tu navegador
+----------------------------------------------
+- Aplicacion Web (Frontend):
+  http://localhost:5173
+
+- Documentacion Interactiva de la API (Swagger UI):
+  http://localhost:8000/docs
+
+- Comprobacion del estado de la API (Healthcheck):
+  http://localhost:8000/health
+
+- Conexion a Base de Datos (PostgreSQL):
+  Host: localhost | Puerto local: 5433 | Base: inventario_fundacite
+
+======================================================================
+4. CREDENCIALES DE ACCESO INICIALES
+======================================================================
+El sistema inicializa automaticamente la cuenta administrativa:
+
+  - Usuario:     admin
+  - Contrasena:  admin123_cambiar
+
+ROLES Y PRIVILEGIOS DEL SISTEMA:
+--------------------------------
+1. SUPERADMIN:
+   - Acceso total.
+   - Creacion y administracion de cuentas de usuarios y roles.
+   - Registro, edicion y desincorporacion de equipos.
+   - Carga multiple de equipos.
+
+2. COORDINADOR:
+   - Registro y edicion de equipos.
+   - Desincorporacion de equipos hacia Deposito.
+   - Carga multiple de computadoras.
+   - Consulta de historial de movimientos y auditoria.
+
+3. TECNICO:
+   - Registro y edicion tecnica de equipos en sitio.
+   - Carga multiple de computadoras.
+   - Consulta de inventario.
+   (No puede desincorporar equipos ni gestionar usuarios).
+
+4. CONSULTA:
+   - Solo lectura del inventario y visualizacion de datos.
+
+======================================================================
+5. GUIA DE USO DE LOS MODULOS DEL SISTEMA
+======================================================================
+
+5.1. Pantalla de Inicio de Sesion (Login Responsivo)
+---------------------------------------------------
+- Al ingresar a http://localhost:5173 seras dirigido a la pantalla de login.
+- Su diseno es 100% responsivo para teléfonos moviles, tablets y pantallas de escritorio.
+- Ingresa tu usuario y contrasena institucional y haz clic en "Ingresar al Sistema".
+
+5.2. Modulo de Inventario y Busqueda Avanzada con Filtros
+--------------------------------------------------------
+En la vista principal del inventario dispones de herramientas de busqueda:
+- Busqueda Rapida: Escribe cualquier termino para buscar coincidencias
+  en Bien Nacional, Serial, MAC, Modelo, Marca o Custodio.
+- Filtro por Oficina / Ubicacion: Selecciona una oficina especifica
+  (ej. Presidencia, Administracion, Telematica) para ver solo sus equipos.
+- Filtro por Custodio / Responsable: Escribe el nombre de la persona
+  para filtrar de inmediato los bienes bajo su custodia.
+- Filtro por Estado: Filtra por Operativo, Danado, En Reparacion o Desincorporado.
+- Filtro por Marca: Selecciona una marca (VIT, Siragon, HP, Dell, Lenovo, Otro, etc.).
+- Boton "Limpiar filtros": Restablece todos los selectores con un solo clic.
+- Contador Dinamico: Muestra en tiempo real la cantidad de equipos encontrados.
+
+5.3. Registro de Equipo Individual (+ Registrar equipo)
+-------------------------------------------------------
+- Haz clic en "+ Registrar equipo".
+- Completa el Bien Nacional (unico), Serial, MAC y Modelo.
+- Selecciona la Marca: Si seleccionas "Otro", se abrira un campo adicional
+  para escribir el nombre de la marca (ej. Djaua).
+- Selecciona el Tipo: Si eliges Laptop, CPU o Servidor, el formulario
+  mostrara automaticamente los campos tecnicos de CPU y Memoria RAM.
+- Asigna la Oficina y el Custodio (nombre del funcionario responsable).
+- Selecciona el Estado del bien.
+- Haz clic en "Guardar equipo".
+
+5.4. Carga Multiple de Computadoras (Carga Patrimonial en Lote)
+--------------------------------------------------------------
+- En la barra de navegacion haz clic en "Carga multiple".
+- Puedes registrar decenas de computadoras en una sola operacion.
+- Usa el boton "+ Agregar computadora" para anadir filas.
+- Cada fila es independiente y puede asignarse a una oficina y custodio diferente.
+- Al pulsar "Guardar computadoras", el sistema ejecuta una transaccion
+  atomica: si todo esta correcto se guarda todo el lote; si hay un error
+  (ej. serial duplicado) se revierte para proteger la integridad.
+
+5.5. Edicion de Equipos y Registro de Movimientos
+-------------------------------------------------
+- En la tabla de inventario haz clic en "Editar" en cualquier equipo.
+- Puedes actualizar sus caracteristicas tecnicas, cambiar el estado o trasladarlo.
+- IMPORTANTE: Si cambias la oficina o el custodio, el sistema registra
+  automaticamente un HISTORIAL DE MOVIMIENTO con fecha y trazabilidad.
+
+5.6. Desincorporacion de Bienes Tecnologicos
+-------------------------------------------
+- Los usuarios con rol COORDINADOR o SUPERADMIN pueden pulsar "Desincorporar".
+- El sistema aplicara la regla de negocio institucional:
+  * El estado cambia a "Desincorporado".
+  * La ubicacion se fija automaticamente en "Deposito".
+  * Se genera un registro inmutable en la tabla de Auditoria (INTENTO_BORRADO).
+  * El registro patrimonial no se destruye fisicamente para preservar la trazabilidad.
+
+5.7. Administracion de Usuarios y Roles (Solo Superadmin)
+--------------------------------------------------------
+- En el menu superior haz clic en "Usuarios".
+- Formulario de alta: Crea nuevos usuarios asignando su contrasena (minimo 8 caracteres)
+  y el rol correspondiente.
+- Tabla administrativa: Permite modificar el rol de cualquier usuario en caliente.
+
+======================================================================
+6. COMANDOS UTILES DE MANTENIMIENTO CON DOCKER
+======================================================================
+
+1. Iniciar el sistema en segundo plano:
+   docker compose up -d
+
+2. Ver el estado de salud de los contenedores:
+   docker compose ps
+
+3. Ver los registros (logs) del Backend en vivo:
+   docker compose logs -f backend_api
+
+4. Ver los registros (logs) del Frontend en vivo:
+   docker compose logs -f frontend_vue
+
+5. Detener el sistema (conservando todos los datos):
+   docker compose down
+
+6. Reiniciar todos los servicios:
+   docker compose restart
+
+7. Recompilar imagenes si se modifican librerias o Dockerfiles:
+   docker compose up -d --build
+
+======================================================================
+7. PREGUNTAS FRECUENTES Y SOLUCION DE PROBLEMAS
+======================================================================
+
+Pregunta: ¿Se pierden los datos cuando apago la computadora o detengo Docker?
+Respuesta: NO. La base de datos utiliza un volumen nombrado persistente
+           llamado `pgdata`, por lo que todos los equipos, movimientos y
+           usuarios quedan guardados permanentemente.
+
+Pregunta: ¿Que hago si el puerto 5432 o 5433 esta ocupado en mi equipo?
+Respuesta: El archivo docker-compose.yml ya mapea el puerto 5433 hacia afuera.
+           Si necesitas cambiarlo, edita la seccion `ports` en docker-compose.yml
+           (por ejemplo "5434:5432").
+
+Pregunta: ¿Como cambio la contrasena del usuario administrador?
+Respuesta: Puedes modificar la variable `ADMIN_PASSWORD` en el archivo `.env`
+           o crear un nuevo usuario SUPERADMIN desde la interfaz web.
+
+Pregunta: La aplicacion web me indica error de conexion con el backend.
+Respuesta: Verifica que el contenedor `telematica_backend` este activo
+           con el comando `docker compose ps` y prueba acceder a
+           http://localhost:8000/health en tu navegador.
+
+======================================================================
+Soporte Tecnico: Coordinacion de Telematica - Fundacite Sucre
+======================================================================

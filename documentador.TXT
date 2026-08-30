@@ -2,17 +2,19 @@ DOCUMENTADOR DEL SISTEMA
 INVENTARIO TECNOLOGICO PARA LA COORDINACION DE TELEMATICA
 FUNDACITE SUCRE
 
-Version documentada: 2026-08-24
+Version documentada: 2.0 (2026-08-25) - Filtros avanzados, Login responsivo y Tutorial
 
 ======================================================================
 1. OBJETIVO DEL SISTEMA
 ======================================================================
 
 Este proyecto administra el inventario tecnologico de Fundacite Sucre.
-Permite registrar equipos, consultar el inventario, buscar por distintos
-criterios, editar los datos durante los controles tecnicos, asignar una
-oficina y un custodio, cargar varios equipos en una sola operacion,
-controlar roles de acceso y conservar auditoria de los cambios.
+Permite registrar equipos, consultar el inventario con busqueda y filtros
+avanzados (por oficina, custodio, estado, marca y busqueda general),
+editar los datos durante los controles tecnicos, asignar oficina y custodio,
+cargar varios equipos en una sola operacion atomica, controlar roles de acceso,
+conservar auditoria inmutable de los cambios y garantizar una experiencia
+adaptable a dispositivos moviles y de escritorio.
 
 El sistema esta dividido en dos aplicaciones principales:
 
@@ -43,6 +45,7 @@ inventario-telematica/
 |-- .env
 |-- .gitignore
 |-- README.md
+|-- TUTORIAL_SISTEMA.txt
 |-- documentador.TXT
 |-- docker-compose.yml
 |
@@ -625,29 +628,29 @@ Navbar muestra enlaces segun rol:
 
 LoginView.vue
 
-Muestra usuario, password y boton de acceso. enviar llama al store,
-redirige al inventario si funciona y muestra mensaje si falla.
+Pantalla de acceso al sistema con diseno 100% responsivo y adaptativo:
+- Emblema visual de Fundacite Sucre y Coordinacion de Telematica.
+- Campos de usuario y contrasena optimizados para dispositivos moviles y PC.
+- Indicador de carga interactivo ("Iniciando sesion...").
+- Manejo visual de alertas y errores en tarjetas destacadas.
+- Envia peticion OAuth2 al store y redirige al inventario al autenticar.
 
 InventarioView.vue
 
-Al montarse llama GET /equipos/. La propiedad computed
- equiposFiltrados busca sin distinguir mayusculas en:
-
-- bien nacional;
-- MAC;
-- custodio o nombre;
-- modelo;
-- marca;
-- detalle de marca Otro;
-- oficina.
-
-El uso de String(valor || '') evita errores cuando MAC, custodio u otro
-valor sea null.
-
-La tabla muestra equipo, MAC, oficina/custodio, estado y acciones.
-Editar esta disponible para TECNICO, COORDINADOR y SUPERADMIN.
-Desincorporar abre el editor con query desincorporar=1 y solo aparece
-para COORDINADOR y SUPERADMIN.
+Panel principal de control patrimonial con busqueda avanzada y filtros:
+- Al montarse ejecuta llamadas concurrentes con Promise.all a /equipos/ y /catalogos.
+- Panel de Filtros Avanzados combinables:
+  * Filtro por Oficina / Ubicacion (dropdown de dependencias institucionales).
+  * Filtro por Custodio / Responsable (busqueda en tiempo real por nombre).
+  * Filtro por Estado (Operativo, Danado, En Reparacion, Desincorporado).
+  * Filtro por Marca (todas las marcas del catalogo y marcas libres).
+  * Busqueda rapida (Bien Nacional, Serial, MAC, Modelo).
+- Boton "Limpiar filtros" para resetear todos los selectores de inmediato.
+- Contador reactivo ("Mostrando X de Y equipos") con aviso de filtros activos.
+- Tabla interactiva con badges de colores para cada estado del equipo.
+- Acciones contextuales segun rol:
+  * Editar disponible para TECNICO, COORDINADOR y SUPERADMIN.
+  * Desincorporar disponible para COORDINADOR y SUPERADMIN.
 
 FormularioEquipoView.vue
 
@@ -745,6 +748,10 @@ Se comprobo:
 - Historial registra cambios de ubicacion y custodio.
 - Build de Vue termina correctamente.
 - La pantalla de carga multiple muestra filas y catalogos.
+- Se probaron los filtros combinados por oficina, custodio, estado y marca.
+- Se verifico el funcionamiento del boton de limpiar filtros y contador reactivo.
+- Se valido la adaptabilidad del login en resoluciones moviles y de escritorio.
+- Se creo el archivo TUTORIAL_SISTEMA.txt con la guia paso a paso de uso.
 
 ======================================================================
 19. INICIO RAPIDO
