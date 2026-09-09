@@ -3,13 +3,14 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session, joinedload
 
 from app.api.dependencies import VerificadorDeRoles, get_db
-from app.controllers.usuarios_ctrl import cambiar_rol, crear_usuario, listar_usuarios
+from app.controllers.usuarios_ctrl import cambiar_rol, crear_usuario, eliminar_usuario, listar_usuarios
 from app.models import models
 from app.schemas import schemas
 
 
 router = APIRouter(prefix="/usuarios", tags=["usuarios"])
-solo_superadmin = Depends(VerificadorDeRoles(["SUPERADMIN"]))
+verificador_superadmin = VerificadorDeRoles(["SUPERADMIN"])
+solo_superadmin = Depends(verificador_superadmin)
 
 
 @router.get("/roles", response_model=list[schemas.CatalogoRef], dependencies=[solo_superadmin])
@@ -47,3 +48,20 @@ def actualizar_rol(usuario_id: int, datos: schemas.UsuarioRolUpdate, db: Session
         return cambiar_rol(db, usuario, datos.rol_id)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.delete("/{usuario_id}", status_code=status.HTTP_200_OK)
+def borrar_usuario(
+    usuario_id: int,
+    db: Session = Depends(get_db),
+    auth_user: dict = Depends(verificador_superadmin),
+) -> dict[str, str]:
+    """Elimina permanentemente la cuenta de un trabajador."""
+    username_solicitante = auth_user.get("sub", "")
+    try:
+        eliminar_usuario(db, usuario_id, username_solicitante)
+        return {"mensaje": "Usuario eliminado exitosamente"}
+    except ValueError as exc:
+        if str(exc) == "El usuario no existe":
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        raise HTTPException(status_code=400, detail=str(exc)) from exc

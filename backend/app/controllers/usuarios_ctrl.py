@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -42,3 +42,25 @@ def cambiar_rol(db: Session, usuario: models.UsuarioSistema, rol_id: int) -> mod
     db.commit()
     db.refresh(usuario)
     return usuario
+
+
+def eliminar_usuario(db: Session, usuario_id: int, username_solicitante: str) -> None:
+    """Elimina una cuenta de usuario validando reglas de seguridad."""
+    usuario = db.get(models.UsuarioSistema, usuario_id)
+    if not usuario:
+        raise ValueError("El usuario no existe")
+
+    if usuario.username == username_solicitante:
+        raise ValueError("No puede eliminar su propia cuenta en sesión")
+
+    if usuario.rol.nombre == "SUPERADMIN":
+        total_superadmins = db.scalar(
+            select(func.count(models.UsuarioSistema.id))
+            .join(models.UsuarioSistema.rol)
+            .where(models.Rol.nombre == "SUPERADMIN")
+        )
+        if total_superadmins and total_superadmins <= 1:
+            raise ValueError("No se puede eliminar el único superadministrador del sistema")
+
+    db.delete(usuario)
+    db.commit()
