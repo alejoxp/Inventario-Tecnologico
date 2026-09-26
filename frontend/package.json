@@ -8,6 +8,10 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/vue3": "^6.1.15",
     "@vitejs/plugin-vue": "5.2.1",
     "axios": "1.7.9",
     "pinia": "2.3.0",

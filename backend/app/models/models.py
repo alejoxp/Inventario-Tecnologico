@@ -23,6 +23,14 @@ class UsuarioSistema(Base):
     # RESTRICT conserva usuarios que aun dependan de un rol existente.
     rol_id: Mapped[int] = mapped_column(ForeignKey("roles.id", ondelete="RESTRICT"), nullable=False)
     rol: Mapped[Rol] = relationship(back_populates="usuarios")
+    prestamos_solicitados: Mapped[list["Prestamo"]] = relationship(
+        back_populates="solicitante_usuario",
+        foreign_keys="Prestamo.custodio_solicitante_id",
+    )
+    prestamos_aprobados: Mapped[list["Prestamo"]] = relationship(
+        back_populates="aprobador",
+        foreign_keys="Prestamo.aprobado_por_usuario_id",
+    )
 
 
 class Marca(Base):
@@ -84,6 +92,61 @@ class Equipo(Base):
         back_populates="equipo",
         cascade="all, delete-orphan",
     )
+    prestamos: Mapped[list["Prestamo"]] = relationship(back_populates="equipo")
+
+
+class Prestamo(Base):
+    __tablename__ = "prestamos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    equipo_id: Mapped[int] = mapped_column(ForeignKey("equipos.id", ondelete="RESTRICT"), nullable=False)
+    custodio_solicitante: Mapped[str] = mapped_column(String(150), nullable=False)
+    custodio_solicitante_id: Mapped[int] = mapped_column(
+        ForeignKey("usuarios_sistema.id", ondelete="RESTRICT"), nullable=False
+    )
+    fecha_inicio: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    fecha_fin: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    estado_solicitud: Mapped[str] = mapped_column(String(20), default="Pendiente", nullable=False)
+    aprobado_por_usuario_id: Mapped[int | None] = mapped_column(
+        ForeignKey("usuarios_sistema.id", ondelete="SET NULL"), nullable=True
+    )
+    motivo_uso: Mapped[str] = mapped_column(Text, nullable=False)
+    actividad: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    descripcion: Mapped[str | None] = mapped_column(Text, nullable=True)
+    observaciones: Mapped[str | None] = mapped_column(Text, nullable=True)
+    creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    __table_args__ = (
+        CheckConstraint(
+            "estado_solicitud IN ('Pendiente', 'Aprobada', 'Rechazada', 'Finalizada')",
+            name="chk_estado_solicitud_prestamo",
+        ),
+        CheckConstraint("fecha_fin > fecha_inicio", name="chk_fechas_prestamo"),
+    )
+
+    equipo: Mapped[Equipo] = relationship(back_populates="prestamos")
+    solicitante_usuario: Mapped[UsuarioSistema] = relationship(
+        back_populates="prestamos_solicitados",
+        foreign_keys=[custodio_solicitante_id],
+    )
+    aprobador: Mapped[UsuarioSistema | None] = relationship(
+        back_populates="prestamos_aprobados",
+        foreign_keys=[aprobado_por_usuario_id],
+    )
+    equipos: Mapped[list["PrestamoEquipo"]] = relationship(
+        back_populates="prestamo",
+        cascade="all, delete-orphan",
+    )
+
+
+class PrestamoEquipo(Base):
+    __tablename__ = "prestamos_equipos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    prestamo_id: Mapped[int] = mapped_column(ForeignKey("prestamos.id", ondelete="CASCADE"), nullable=False)
+    equipo_id: Mapped[int] = mapped_column(ForeignKey("equipos.id", ondelete="RESTRICT"), nullable=False)
+
+    prestamo: Mapped[Prestamo] = relationship(back_populates="equipos")
+    equipo: Mapped[Equipo] = relationship()
 
 
 class EspecificacionesPC(Base):

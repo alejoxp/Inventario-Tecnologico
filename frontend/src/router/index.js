@@ -5,6 +5,9 @@ import InventarioView from '../views/InventarioView.vue'
 import FormularioEquipoView from '../views/FormularioEquipoView.vue'
 import UsuariosView from '../views/UsuariosView.vue'
 import CargaMultipleView from '../views/CargaMultipleView.vue'
+import SolicitudPrestamoView from '../views/SolicitudPrestamoView.vue'
+import CalendarioPrestamosView from '../views/CalendarioPrestamosView.vue'
+import PrestamosView from '../views/PrestamosView.vue'
 
 const router = createRouter({
   history: createWebHistory(),
@@ -16,6 +19,9 @@ const router = createRouter({
     { path: '/equipos/carga-multiple', component: CargaMultipleView, meta: { roles: ['TECNICO', 'COORDINADOR', 'SUPERADMIN'] } },
     { path: '/equipos/:id/editar', component: FormularioEquipoView, meta: { roles: ['TECNICO', 'COORDINADOR', 'SUPERADMIN'] } },
     { path: '/usuarios', component: UsuariosView, meta: { roles: ['SUPERADMIN'] } },
+    { path: '/prestamos/nuevo', component: SolicitudPrestamoView },
+    { path: '/prestamos/calendario', component: CalendarioPrestamosView },
+    { path: '/prestamos', component: PrestamosView },
   ],
 })
 

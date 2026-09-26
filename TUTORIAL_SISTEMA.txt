@@ -58,7 +58,7 @@ Los 3 servicios deben indicar estado "Up".
 Paso 4: Abrir las aplicaciones en tu navegador
 ----------------------------------------------
 - Aplicacion Web (Frontend):
-  http://localhost:5173
+  http://localhost:5174
 
 - Documentacion Interactiva de la API (Swagger UI):
   http://localhost:8000/docs
@@ -106,7 +106,7 @@ ROLES Y PRIVILEGIOS DEL SISTEMA:
 
 5.1. Pantalla de Inicio de Sesion (Login Responsivo)
 ---------------------------------------------------
-- Al ingresar a http://localhost:5173 seras dirigido a la pantalla de login.
+- Al ingresar a http://localhost:5174 seras dirigido a la pantalla de login.
 - Su diseno es 100% responsivo para teléfonos moviles, tablets y pantallas de escritorio.
 - Ingresa tu usuario y contrasena institucional y haz clic en "Ingresar al Sistema".
 

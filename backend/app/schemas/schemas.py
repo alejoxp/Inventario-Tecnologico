@@ -105,6 +105,60 @@ class AuditoriaResponse(BaseModel):
     usuario_db: str
 
 
+class PrestamoCreate(BaseModel):
+    equipo_id: int | None = None
+    equipos_ids: list[int] | None = Field(default=None, min_length=1, max_length=50)
+    custodio_solicitante: str = Field(min_length=1, max_length=150)
+    fecha_inicio: datetime
+    fecha_fin: datetime
+    estado_solicitud: str = Field(default="Pendiente", pattern="^Pendiente$")
+    aprobado_por_usuario_id: int | None = None
+    motivo_uso: str = Field(default="", max_length=1000)
+    actividad: str = Field(min_length=1, max_length=200)
+    descripcion: str | None = Field(default=None, max_length=2000)
+    observaciones: str | None = Field(default=None, max_length=2000)
+
+
+class PrestamoUpdate(BaseModel):
+    estado_solicitud: str = Field(pattern="^(Aprobada|Rechazada)$")
+
+
+class PrestamoDevolucion(BaseModel):
+    observaciones: str | None = Field(default=None, max_length=2000)
+
+
+class PrestamoResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    equipo_id: int
+    equipos_ids: list[int] = []
+    equipos_nombres: list[str] = []
+    custodio_solicitante: str
+    fecha_inicio: datetime
+    fecha_fin: datetime
+    estado_solicitud: str
+    aprobado_por_usuario_id: int | None
+    motivo_uso: str
+    actividad: str
+    descripcion: str | None
+    observaciones: str | None
+    dias: int
+    estado_temporal_equipo: str
+    equipo_nombre: str
+    aprobador_username: str | None = None
+
+
+class PrestamoCalendarioResponse(BaseModel):
+    id: int
+    title: str
+    start: datetime
+    end: datetime
+    estado: str
+    backgroundColor: str
+    extendedProps: dict
+
+
 class TokenResponse(BaseModel):
     """Respuesta OAuth2 simplificada para el frontend institucional."""
 

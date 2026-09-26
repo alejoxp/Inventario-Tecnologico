@@ -792,3 +792,21 @@ Para produccion se recomienda:
 
 Este documento describe el estado implementado y las decisiones tomadas
 hasta la fecha indicada en la cabecera.
+
+
+Okey esta bien esto... pero quiero que las paginas cuando pasen de cierta cantidad o que se muestren al principio 20 equipos... pueda dividirse en sub paginas asi como aparecen en varios sistemas que tiene el next de 1...2...3..4..5...6.... -> 
+
+Bueno, tambien quiero que la  parte de generar el prestamos sea mas sencilla.... que al pedir un prestamos coloquemos en un calendario pequeño. el dia que vamos a utilizarlos y al pedir el prestamos (si es un tecnico) coloque 
+
+Actividad, equipos que se llevaran y una descripcion y observaciones
+
+Y cuando pasen los dias salga como devuelto sino que genere una notificacion de olvidado. de paso... hacer una parte. para ver los equipos prestados, cuantos dias seran y que equipos estan prestados y a quien se le presto los equipos. 
+
+
+Okey esta bien esto... pero quiero que las paginas cuando pasen de cierta cantidad o que se muestren al principio 20 equipos... pueda dividirse en sub paginas asi como aparecen en varios sistemas que tiene el next de 1...2...3..4..5...6.... -> 
+
+Bueno, tambien quiero que la  parte de generar el prestamos sea mas sencilla.... que al pedir un prestamos coloquemos en un calendario pequeño. el dia que vamos a utilizarlos y al pedir el prestamos (si es un tecnico) coloque 
+
+Actividad, equipos que se llevaran y una descripcion y observaciones
+
+Y cuando pasen los dias salga como devuelto sino que genere una notificacion de olvidado. de paso... hacer una parte. para ver los equipos prestados, cuantos dias seran y que equipos estan prestados y a quien se le presto los equipos. 

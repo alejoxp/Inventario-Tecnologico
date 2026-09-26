@@ -16,7 +16,7 @@ docker compose up -d
 
 Abrir:
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:5174
 - API y documentacion: http://localhost:8000/docs
 - Estado del backend: http://localhost:8000/health
 

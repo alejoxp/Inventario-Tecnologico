@@ -19,6 +19,7 @@ const cerrarSesion = () => {
     </div>
     <nav>
       <RouterLink to="/inventario">Inventario</RouterLink>
+      <RouterLink to="/prestamos">Préstamos</RouterLink>
       <RouterLink v-if="['TECNICO', 'COORDINADOR', 'SUPERADMIN'].includes(auth.rol)" to="/equipos/nuevo">
         Nuevo equipo
       </RouterLink>

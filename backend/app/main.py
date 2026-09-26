@@ -11,6 +11,7 @@ from app.api.rutas.equipos import router as equipos_router
 from app.api.rutas.auth import router as auth_router
 from app.api.rutas.catalogos import router as catalogos_router
 from app.api.rutas.usuarios import router as usuarios_router
+from app.api.rutas.prestamos import router as prestamos_router
 
 # Instancia principal de la API que sera descubierta por Uvicorn.
 app = FastAPI(
@@ -21,7 +22,7 @@ app = FastAPI(
 # Permite que la SPA local consuma la API durante el desarrollo.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -31,6 +32,7 @@ app.include_router(equipos_router, prefix="/api")
 app.include_router(auth_router, prefix="/api")
 app.include_router(catalogos_router, prefix="/api")
 app.include_router(usuarios_router, prefix="/api")
+app.include_router(prestamos_router, prefix="/api")
 
 
 @app.on_event("startup")

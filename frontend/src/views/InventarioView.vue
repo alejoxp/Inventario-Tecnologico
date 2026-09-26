@@ -14,6 +14,8 @@ const filtroOficina = ref('')
 const filtroCustodio = ref('')
 const filtroEstado = ref('')
 const filtroMarca = ref('')
+const paginaActual = ref(1)
+const equiposPorPagina = 20
 
 const cargando = ref(true)
 const error = ref('')
@@ -37,6 +39,7 @@ function limpiarFiltros() {
   filtroCustodio.value = ''
   filtroEstado.value = ''
   filtroMarca.value = ''
+  reiniciarPagina()
 }
 
 const equiposFiltrados = computed(() => {
@@ -86,6 +89,25 @@ const equiposFiltrados = computed(() => {
     return true
   })
 })
+
+const totalPaginas = computed(() => Math.max(1, Math.ceil(equiposFiltrados.value.length / equiposPorPagina)))
+const equiposPaginados = computed(() => {
+  const inicio = (paginaActual.value - 1) * equiposPorPagina
+  return equiposFiltrados.value.slice(inicio, inicio + equiposPorPagina)
+})
+const paginasVisibles = computed(() => {
+  const fin = Math.min(totalPaginas.value, Math.max(5, paginaActual.value + 2))
+  const inicio = Math.max(1, fin - 4)
+  return Array.from({ length: fin - inicio + 1 }, (_, indice) => inicio + indice)
+})
+
+function cambiarPagina(pagina) {
+  paginaActual.value = Math.min(Math.max(1, pagina), totalPaginas.value)
+}
+
+function reiniciarPagina() {
+  paginaActual.value = 1
+}
 
 async function cargarDatos() {
   cargando.value = true
@@ -146,13 +168,14 @@ onMounted(cargarDatos)
             v-model="busqueda"
             class="input-form"
             placeholder="Escriba para buscar..."
+            @input="reiniciarPagina"
           />
         </label>
 
         <!-- Filtro por Oficina -->
         <label class="campo-filtro">
           <span>Oficina / Ubicación</span>
-          <select v-model="filtroOficina" class="input-form">
+            <select v-model="filtroOficina" class="input-form" @change="reiniciarPagina">
             <option value="">Todas las oficinas</option>
             <option v-for="ubicacion in ubicaciones" :key="ubicacion.id" :value="ubicacion.id">
               {{ ubicacion.nombre }}
@@ -167,13 +190,14 @@ onMounted(cargarDatos)
             v-model="filtroCustodio"
             class="input-form"
             placeholder="Filtrar por custodio..."
+            @input="reiniciarPagina"
           />
         </label>
 
         <!-- Filtro por Estado -->
         <label class="campo-filtro">
           <span>Estado del equipo</span>
-          <select v-model="filtroEstado" class="input-form">
+            <select v-model="filtroEstado" class="input-form" @change="reiniciarPagina">
             <option value="">Todos los estados</option>
             <option v-for="est in estadosDisponibles" :key="est" :value="est">
               {{ est }}
@@ -184,7 +208,7 @@ onMounted(cargarDatos)
         <!-- Filtro por Marca -->
         <label class="campo-filtro">
           <span>Marca</span>
-          <select v-model="filtroMarca" class="input-form">
+            <select v-model="filtroMarca" class="input-form" @change="reiniciarPagina">
             <option value="">Todas las marcas</option>
             <option v-for="marca in marcas" :key="marca.id" :value="marca.id">
               {{ marca.nombre }}
@@ -196,7 +220,7 @@ onMounted(cargarDatos)
       <!-- Resumen de resultados -->
       <div class="barra-conteo-filtros">
         <span class="badge-conteo">
-          Mostrando <strong>{{ equiposFiltrados.length }}</strong> de <strong>{{ equipos.length }}</strong> equipos
+          Mostrando <strong>{{ equiposPaginados.length }}</strong> de <strong>{{ equiposFiltrados.length }}</strong> equipos
         </span>
         <span v-if="hayFiltrosActivos" class="aviso-filtros-activos">
           (Filtros aplicados)
@@ -228,7 +252,7 @@ onMounted(cargarDatos)
               No se encontraron equipos con los criterios de búsqueda seleccionados.
             </td>
           </tr>
-          <tr v-for="equipo in equiposFiltrados" :key="equipo.id">
+          <tr v-for="equipo in equiposPaginados" :key="equipo.id">
             <td class="col-bien-nacional"><strong>{{ equipo.bien_nacional }}</strong></td>
             <td>
               {{ equipo.marca?.nombre === 'Otro' && equipo.marca_detalle ? equipo.marca_detalle : (equipo.marca?.nombre || 'Sin marca') }}
@@ -265,5 +289,31 @@ onMounted(cargarDatos)
         </tbody>
       </table>
     </div>
+    <nav v-if="totalPaginas > 1" class="paginacion" aria-label="Paginación del inventario">
+      <button class="btn-secundario btn-pequeno" type="button" :disabled="paginaActual === 1" @click="cambiarPagina(paginaActual - 1)">
+        Anterior
+      </button>
+      <button
+        v-for="pagina in paginasVisibles"
+        :key="pagina"
+        class="btn-secundario btn-pequeno pagina"
+        :class="{ 'pagina-activa': pagina === paginaActual }"
+        type="button"
+        :aria-current="pagina === paginaActual ? 'page' : undefined"
+        @click="cambiarPagina(pagina)"
+      >
+        {{ pagina }}
+      </button>
+      <button class="btn-secundario btn-pequeno" type="button" :disabled="paginaActual === totalPaginas" @click="cambiarPagina(paginaActual + 1)">
+        Siguiente
+      </button>
+    </nav>
   </main>
 </template>
+
+<style scoped>
+.paginacion { display: flex; justify-content: center; align-items: center; gap: .4rem; margin-top: 1rem; }
+.pagina { min-width: 2.2rem; }
+.pagina-activa { color: white; background: var(--azul-institucional); }
+.paginacion button:disabled { opacity: .5; cursor: not-allowed; }
+</style>

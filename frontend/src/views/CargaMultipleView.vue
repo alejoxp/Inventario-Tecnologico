@@ -15,7 +15,7 @@ function nuevaComputadora() {
   return {
     bien_nacional: '', serial: '', mac: '', modelo: '', marca_id: '', marca_detalle: '',
     tipo_id: '', ubicacion_id: '', custodio: '', estado: 'Operativo', observaciones: '',
-    especificaciones: { cpu: '', ram: '' },
+    especificaciones: { cpu: '', ram: '', almacenamiento: '' },
   }
 }
 
@@ -100,7 +100,7 @@ async function guardarLote() {
           <label class="campo-label">Custodio<input v-model="equipo.custodio" class="input-form" maxlength="150" placeholder="Nombre de la persona" /></label>
           <label class="campo-label">Tipo<select v-model="equipo.tipo_id" class="input-form" required><option value="" disabled>Seleccione</option><option v-for="tipo in tipos" :key="tipo.id" :value="tipo.id">{{ tipo.nombre }}</option></select></label>
           <label class="campo-label">Estado<select v-model="equipo.estado" class="input-form" @change="ajustarUbicacion(equipo)"><option>Operativo</option><option>Dañado</option><option>En Reparación</option><option>Desincorporado</option></select></label>
-          <template v-if="requiereEspecificaciones(equipo)"><label class="campo-label">CPU<input v-model="equipo.especificaciones.cpu" class="input-form" required /></label><label class="campo-label">RAM<input v-model="equipo.especificaciones.ram" class="input-form" required /></label></template>
+          <template v-if="requiereEspecificaciones(equipo)"><label class="campo-label">CPU<input v-model="equipo.especificaciones.cpu" class="input-form" required /></label><label class="campo-label">RAM<input v-model="equipo.especificaciones.ram" class="input-form" required /></label><label class="campo-label">Disco<input v-model="equipo.especificaciones.almacenamiento" class="input-form" type="text" placeholder="Ejemplo: SSD 480 GB" /></label></template>
         </div>
       </section>
       <p v-if="error" class="mensaje-error">{{ error }}</p>
