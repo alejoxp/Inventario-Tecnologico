@@ -794,19 +794,41 @@ Este documento describe el estado implementado y las decisiones tomadas
 hasta la fecha indicada en la cabecera.
 
 
-Okey esta bien esto... pero quiero que las paginas cuando pasen de cierta cantidad o que se muestren al principio 20 equipos... pueda dividirse en sub paginas asi como aparecen en varios sistemas que tiene el next de 1...2...3..4..5...6.... -> 
+======================================================================
+21. ACTUALIZACIONES: PAGINACIÓN DINÁMICA Y GESTIÓN DE PRÉSTAMOS
+======================================================================
 
-Bueno, tambien quiero que la  parte de generar el prestamos sea mas sencilla.... que al pedir un prestamos coloquemos en un calendario pequeño. el dia que vamos a utilizarlos y al pedir el prestamos (si es un tecnico) coloque 
+Se implementaron las mejoras requeridas para optimizar el control técnico:
 
-Actividad, equipos que se llevaran y una descripcion y observaciones
+1. Paginación Inteligente (Estilo 1 ... 2 3 4 5 6 ... ->):
+   - Muestra 20 equipos por página por defecto, con selector para 10, 20, 50 ó 100.
+   - Navegación completa con botones primera página (««), anterior (←), números de página
+     con elipsis inteligentes (...) cuando la lista es extensa, siguiente (→) y última página (»»).
+   - Contador de rango y totales (ej. Mostrando 1 - 20 de 120 equipos).
+   - Implementado en InventarioView.vue, PrestamosView.vue y en la versión de demostración.
 
-Y cuando pasen los dias salga como devuelto sino que genere una notificacion de olvidado. de paso... hacer una parte. para ver los equipos prestados, cuantos dias seran y que equipos estan prestados y a quien se le presto los equipos. 
+2. Generación Simplificada de Préstamos (SolicitudPrestamoView.vue):
+   - Mini-calendario interactivo embebido: permite seleccionar el día de inicio y fin
+     haciendo clic directamente sobre los días del mes, con cálculo dinámico de duración
+     y presets de acceso rápido (1 día, 2 días, 3 días, 1 semana).
+   - Selector interactivo de equipos: interfaz visual con buscador en tiempo real,
+     filtro por tipo y casillas de selección, eliminando el select múltiple engorroso.
+   - Registro de Actividad (con sugerencias rápidas), Equipos a llevar, Descripción y Observaciones.
+   - Activación inmediata para técnicos y coordinadores: permite registrar préstamos activos
+     directamente en uso ("Ocupado") sin esperar aprobaciones secundarias.
 
+3. Sistema de Notificaciones de Retraso ("Préstamos Olvidados"):
+   - Detección automática en backend y frontend: si la fecha límite de devolución expira
+     y el préstamo no ha sido finalizado, pasa al estado "Olvidado".
+   - Notificación visual con insignia de alerta en la barra de navegación superior (Navbar).
+   - Banner de advertencia destacado en el panel de préstamos con lista de personas y equipos en mora.
 
-Okey esta bien esto... pero quiero que las paginas cuando pasen de cierta cantidad o que se muestren al principio 20 equipos... pueda dividirse en sub paginas asi como aparecen en varios sistemas que tiene el next de 1...2...3..4..5...6.... -> 
-
-Bueno, tambien quiero que la  parte de generar el prestamos sea mas sencilla.... que al pedir un prestamos coloquemos en un calendario pequeño. el dia que vamos a utilizarlos y al pedir el prestamos (si es un tecnico) coloque 
-
-Actividad, equipos que se llevaran y una descripcion y observaciones
-
-Y cuando pasen los dias salga como devuelto sino que genere una notificacion de olvidado. de paso... hacer una parte. para ver los equipos prestados, cuantos dias seran y que equipos estan prestados y a quien se le presto los equipos. 
+4. Panel de Equipos Prestados y Control de Salidas (PrestamosView.vue):
+   - Métricas y KPIs en vivo: Equipos prestados en la calle, Préstamos en curso, Olvidados y Devueltos.
+   - Pestañas de filtrado: Todos, Olvidados / Atrasados, En Préstamo Activos, Devueltos y Pendientes.
+   - Tabla detallada con desglose de:
+     * ¿A quién se le prestó? (Responsable con avatar)
+     * ¿Qué equipos están prestados? (Chips con Bien Nacional, Tipo y Modelo)
+     * ¿Cuántos días serán? (Total de días, fechas límite y badge dinámico de días restantes o atraso)
+     * Botón "Registrar devolución" directo para técnicos y coordinadores con modal de confirmación
+       y campo de observaciones de recepción. 

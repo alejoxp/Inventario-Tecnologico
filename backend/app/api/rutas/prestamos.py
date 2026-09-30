@@ -11,15 +11,18 @@ from app.schemas import schemas
 
 router = APIRouter(prefix="/prestamos", tags=["prestamos"])
 roles_gestion = VerificadorDeRoles(["COORDINADOR", "SUPERADMIN"])
+roles_devolucion = VerificadorDeRoles(["TECNICO", "COORDINADOR", "SUPERADMIN"])
 
 
 def _estado_temporal(prestamo: models.Prestamo, ahora: datetime) -> str:
     if prestamo.estado_solicitud == "Finalizada":
         return "Devuelto"
+    if prestamo.estado_solicitud == "Rechazada":
+        return "Rechazado"
+    if prestamo.estado_solicitud == "Pendiente":
+        return "Pendiente"
     if prestamo.estado_solicitud == "Aprobada" and ahora > prestamo.fecha_fin:
         return "Olvidado"
-    if prestamo.estado_solicitud != "Aprobada":
-        return "Libre"
     if prestamo.fecha_inicio <= ahora <= prestamo.fecha_fin:
         return "Ocupado"
     if ahora < prestamo.fecha_inicio:
@@ -38,6 +41,12 @@ def _equipos_prestamo(prestamo: models.Prestamo) -> list[models.Equipo]:
 
 def _respuesta(prestamo: models.Prestamo) -> schemas.PrestamoResponse:
     equipos = _equipos_prestamo(prestamo)
+    ahora = datetime.now(timezone.utc)
+    estado_temp = _estado_temporal(prestamo, ahora)
+    dias_totales = max(1, (prestamo.fecha_fin - prestamo.fecha_inicio).days)
+    dias_restantes = (prestamo.fecha_fin - ahora).days if prestamo.estado_solicitud == "Aprobada" else None
+    es_olvidado = (estado_temp == "Olvidado")
+
     return schemas.PrestamoResponse(
         id=prestamo.id,
         equipo_id=prestamo.equipo_id,
@@ -47,14 +56,16 @@ def _respuesta(prestamo: models.Prestamo) -> schemas.PrestamoResponse:
         estado_solicitud=prestamo.estado_solicitud,
         aprobado_por_usuario_id=prestamo.aprobado_por_usuario_id,
         motivo_uso=prestamo.motivo_uso,
-        estado_temporal_equipo=_estado_temporal(prestamo, datetime.now(timezone.utc)),
+        estado_temporal_equipo=estado_temp,
         equipo_nombre=_nombre_equipo(equipos[0]) if equipos else "Sin equipo",
         equipos_ids=[equipo.id for equipo in equipos],
         equipos_nombres=[_nombre_equipo(equipo) for equipo in equipos],
         actividad=prestamo.actividad or prestamo.motivo_uso,
         descripcion=prestamo.descripcion,
         observaciones=prestamo.observaciones,
-        dias=max(1, (prestamo.fecha_fin - prestamo.fecha_inicio).days),
+        dias=dias_totales,
+        dias_restantes=dias_restantes,
+        es_olvidado=es_olvidado,
         aprobador_username=prestamo.aprobador.username if prestamo.aprobador else None,
     )
 
@@ -107,13 +118,24 @@ def crear_prestamo(
         raise HTTPException(status_code=409, detail="El equipo no está disponible para préstamos")
     if _hay_solapamiento(db, equipo_ids, datos):
         raise HTTPException(status_code=409, detail="El equipo ya tiene una solicitud en ese rango")
+    rol_actual = auth_user.get("rol")
+    estado_deseado = datos.estado_solicitud or "Pendiente"
+    aprobador_id = None
+    if estado_deseado == "Aprobada" and rol_actual in ["TECNICO", "COORDINADOR", "SUPERADMIN"]:
+        estado_deseado = "Aprobada"
+        aprobador_id = usuario.id
+    else:
+        estado_deseado = "Pendiente"
+
     prestamo = models.Prestamo(
         equipo_id=equipo_ids[0],
         custodio_solicitante=datos.custodio_solicitante,
         custodio_solicitante_id=usuario.id,
         fecha_inicio=datos.fecha_inicio,
         fecha_fin=datos.fecha_fin,
-        motivo_uso=datos.motivo_uso,
+        estado_solicitud=estado_deseado,
+        aprobado_por_usuario_id=aprobador_id,
+        motivo_uso=datos.motivo_uso or datos.actividad,
         actividad=datos.actividad,
         descripcion=datos.descripcion,
         observaciones=datos.observaciones,
@@ -132,7 +154,7 @@ def listar_prestamos(
     db: Session = Depends(get_db),
     _auth_user: dict = Depends(VerificadorDeRoles(["CONSULTA", "TECNICO", "COORDINADOR", "SUPERADMIN"])),
 ) -> list[schemas.PrestamoResponse]:
-    prestamos = db.scalars(_consulta_prestamo().order_by(models.Prestamo.fecha_inicio)).unique().all()
+    prestamos = db.scalars(_consulta_prestamo().order_by(models.Prestamo.fecha_inicio.desc())).unique().all()
     return [_respuesta(prestamo) for prestamo in prestamos]
 
 
@@ -142,7 +164,17 @@ def eventos_calendario(
     _auth_user: dict = Depends(VerificadorDeRoles(["CONSULTA", "TECNICO", "COORDINADOR", "SUPERADMIN"])),
 ) -> list[schemas.PrestamoCalendarioResponse]:
     prestamos = db.scalars(_consulta_prestamo()).unique().all()
-    colores = {"Pendiente": "#d97706", "Aprobada": "#15803d", "Rechazada": "#b91c1c", "Finalizada": "#64748b", "Devuelto": "#64748b", "Olvidado": "#b91c1c"}
+    colores = {
+        "Pendiente": "#d97706",
+        "Aprobada": "#15803d",
+        "Rechazada": "#b91c1c",
+        "Finalizada": "#64748b",
+        "Devuelto": "#64748b",
+        "Olvidado": "#dc2626",
+        "Ocupado": "#2563eb",
+        "Apartado": "#0891b2",
+        "Libre": "#10b981",
+    }
     ahora = datetime.now(timezone.utc)
     return [schemas.PrestamoCalendarioResponse(
         id=prestamo.id,
@@ -150,7 +182,7 @@ def eventos_calendario(
         start=prestamo.fecha_inicio,
         end=prestamo.fecha_fin,
         estado=_estado_temporal(prestamo, ahora),
-        backgroundColor=colores[_estado_temporal(prestamo, ahora)],
+        backgroundColor=colores.get(_estado_temporal(prestamo, ahora), "#2563eb"),
         extendedProps={"estado": _estado_temporal(prestamo, ahora), "custodio": prestamo.custodio_solicitante, "motivo": prestamo.motivo_uso, "actividad": prestamo.actividad, "descripcion": prestamo.descripcion, "observaciones": prestamo.observaciones, "equipo": ", ".join(_nombre_equipo(equipo) for equipo in _equipos_prestamo(prestamo))},
     ) for prestamo in prestamos]
 
@@ -190,7 +222,7 @@ def devolver_prestamo(
     prestamo_id: int,
     datos: schemas.PrestamoDevolucion,
     db: Session = Depends(get_db),
-    _auth_user: dict = Depends(roles_gestion),
+    _auth_user: dict = Depends(roles_devolucion),
 ) -> schemas.PrestamoResponse:
     prestamo = db.scalar(_consulta_prestamo().where(models.Prestamo.id == prestamo_id))
     if not prestamo:

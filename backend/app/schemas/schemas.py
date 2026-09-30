@@ -111,7 +111,7 @@ class PrestamoCreate(BaseModel):
     custodio_solicitante: str = Field(min_length=1, max_length=150)
     fecha_inicio: datetime
     fecha_fin: datetime
-    estado_solicitud: str = Field(default="Pendiente", pattern="^Pendiente$")
+    estado_solicitud: str = Field(default="Pendiente", pattern="^(Pendiente|Aprobada)$")
     aprobado_por_usuario_id: int | None = None
     motivo_uso: str = Field(default="", max_length=1000)
     actividad: str = Field(min_length=1, max_length=200)
@@ -144,6 +144,8 @@ class PrestamoResponse(BaseModel):
     descripcion: str | None
     observaciones: str | None
     dias: int
+    dias_restantes: int | None = None
+    es_olvidado: bool = False
     estado_temporal_equipo: str
     equipo_nombre: str
     aprobador_username: str | None = None

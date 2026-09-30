@@ -15,7 +15,7 @@ const filtroCustodio = ref('')
 const filtroEstado = ref('')
 const filtroMarca = ref('')
 const paginaActual = ref(1)
-const equiposPorPagina = 20
+const equiposPorPagina = ref(20)
 
 const cargando = ref(true)
 const error = ref('')
@@ -90,19 +90,32 @@ const equiposFiltrados = computed(() => {
   })
 })
 
-const totalPaginas = computed(() => Math.max(1, Math.ceil(equiposFiltrados.value.length / equiposPorPagina)))
+const totalPaginas = computed(() => Math.max(1, Math.ceil(equiposFiltrados.value.length / equiposPorPagina.value)))
+const indiceInicio = computed(() => (paginaActual.value - 1) * equiposPorPagina.value)
+const indiceFin = computed(() => Math.min(indiceInicio.value + equiposPorPagina.value, equiposFiltrados.value.length))
+
 const equiposPaginados = computed(() => {
-  const inicio = (paginaActual.value - 1) * equiposPorPagina
-  return equiposFiltrados.value.slice(inicio, inicio + equiposPorPagina)
+  return equiposFiltrados.value.slice(indiceInicio.value, indiceFin.value)
 })
-const paginasVisibles = computed(() => {
-  const fin = Math.min(totalPaginas.value, Math.max(5, paginaActual.value + 2))
-  const inicio = Math.max(1, fin - 4)
-  return Array.from({ length: fin - inicio + 1 }, (_, indice) => inicio + indice)
+
+const paginasPaginador = computed(() => {
+  const total = totalPaginas.value
+  const actual = paginaActual.value
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, indice) => indice + 1)
+  }
+  if (actual <= 4) {
+    return [1, 2, 3, 4, 5, '...', total]
+  }
+  if (actual >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  }
+  return [1, '...', actual - 1, actual, actual + 1, '...', total]
 })
 
 function cambiarPagina(pagina) {
-  paginaActual.value = Math.min(Math.max(1, pagina), totalPaginas.value)
+  if (pagina === '...') return
+  paginaActual.value = Math.min(Math.max(1, Number(pagina)), totalPaginas.value)
 }
 
 function reiniciarPagina() {
@@ -217,14 +230,25 @@ onMounted(cargarDatos)
         </label>
       </div>
 
-      <!-- Resumen de resultados -->
+      <!-- Resumen de resultados y selector de equipos por página -->
       <div class="barra-conteo-filtros">
-        <span class="badge-conteo">
-          Mostrando <strong>{{ equiposPaginados.length }}</strong> de <strong>{{ equiposFiltrados.length }}</strong> equipos
-        </span>
-        <span v-if="hayFiltrosActivos" class="aviso-filtros-activos">
-          (Filtros aplicados)
-        </span>
+        <div class="conteo-izq">
+          <span class="badge-conteo">
+            Mostrando <strong>{{ equiposFiltrados.length ? indiceInicio + 1 : 0 }} - {{ indiceFin }}</strong> de <strong>{{ equiposFiltrados.length }}</strong> equipos
+          </span>
+          <span v-if="hayFiltrosActivos" class="aviso-filtros-activos">
+            (Filtros aplicados)
+          </span>
+        </div>
+        <div class="selector-por-pagina">
+          <label for="selectPorPagina">Mostrar por página:</label>
+          <select id="selectPorPagina" v-model="equiposPorPagina" class="select-tamano-pagina" @change="reiniciarPagina">
+            <option :value="10">10 equipos</option>
+            <option :value="20">20 equipos</option>
+            <option :value="50">50 equipos</option>
+            <option :value="100">100 equipos</option>
+          </select>
+        </div>
       </div>
     </section>
 
@@ -289,31 +313,164 @@ onMounted(cargarDatos)
         </tbody>
       </table>
     </div>
+
+    <!-- Paginación completa con navegación y elipsis: 1...2...3..4..5...6... -> -->
     <nav v-if="totalPaginas > 1" class="paginacion" aria-label="Paginación del inventario">
-      <button class="btn-secundario btn-pequeno" type="button" :disabled="paginaActual === 1" @click="cambiarPagina(paginaActual - 1)">
-        Anterior
+      <button
+        class="btn-secundario btn-pequeno btn-nav"
+        type="button"
+        :disabled="paginaActual === 1"
+        title="Primera página"
+        @click="cambiarPagina(1)"
+      >
+        ««
       </button>
       <button
-        v-for="pagina in paginasVisibles"
-        :key="pagina"
-        class="btn-secundario btn-pequeno pagina"
-        :class="{ 'pagina-activa': pagina === paginaActual }"
+        class="btn-secundario btn-pequeno btn-nav"
         type="button"
-        :aria-current="pagina === paginaActual ? 'page' : undefined"
-        @click="cambiarPagina(pagina)"
+        :disabled="paginaActual === 1"
+        title="Página anterior"
+        @click="cambiarPagina(paginaActual - 1)"
       >
-        {{ pagina }}
+        ← Anterior
       </button>
-      <button class="btn-secundario btn-pequeno" type="button" :disabled="paginaActual === totalPaginas" @click="cambiarPagina(paginaActual + 1)">
-        Siguiente
+
+      <div class="numeros-paginas">
+        <template v-for="(elem, idx) in paginasPaginador" :key="idx">
+          <span v-if="elem === '...'" class="paginacion-elipsis">...</span>
+          <button
+            v-else
+            class="btn-secundario btn-pequeno pagina"
+            :class="{ 'pagina-activa': elem === paginaActual }"
+            type="button"
+            :aria-current="elem === paginaActual ? 'page' : undefined"
+            @click="cambiarPagina(elem)"
+          >
+            {{ elem }}
+          </button>
+        </template>
+      </div>
+
+      <button
+        class="btn-secundario btn-pequeno btn-nav"
+        type="button"
+        :disabled="paginaActual === totalPaginas"
+        title="Página siguiente"
+        @click="cambiarPagina(paginaActual + 1)"
+      >
+        Siguiente →
       </button>
+      <button
+        class="btn-secundario btn-pequeno btn-nav"
+        type="button"
+        :disabled="paginaActual === totalPaginas"
+        title="Última página"
+        @click="cambiarPagina(totalPaginas)"
+      >
+        »»
+      </button>
+
+      <span class="info-pagina-actual">
+        Pág. <strong>{{ paginaActual }}</strong> de <strong>{{ totalPaginas }}</strong>
+      </span>
     </nav>
   </main>
 </template>
 
 <style scoped>
-.paginacion { display: flex; justify-content: center; align-items: center; gap: .4rem; margin-top: 1rem; }
-.pagina { min-width: 2.2rem; }
-.pagina-activa { color: white; background: var(--azul-institucional); }
-.paginacion button:disabled { opacity: .5; cursor: not-allowed; }
+.barra-conteo-filtros {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  margin-top: 1rem;
+}
+.conteo-izq {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.selector-por-pagina {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.88rem;
+  color: #475569;
+}
+.select-tamano-pagina {
+  padding: 0.25rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  background: #fff;
+  cursor: pointer;
+}
+.paginacion {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 1.5rem;
+  padding-bottom: 2rem;
+}
+.numeros-paginas {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.btn-nav {
+  font-weight: 600;
+  padding: 0.35rem 0.65rem;
+}
+.pagina {
+  min-width: 2.3rem;
+  height: 2.3rem;
+  padding: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.15s ease-in-out;
+}
+.pagina-activa {
+  color: white !important;
+  background: var(--azul-institucional, #0284c7) !important;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.35);
+  border-color: transparent;
+}
+.paginacion-elipsis {
+  padding: 0 0.35rem;
+  color: #94a3b8;
+  font-weight: 700;
+  user-select: none;
+}
+.info-pagina-actual {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-left: 0.75rem;
+}
+.paginacion button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+@media (max-width: 640px) {
+  .barra-conteo-filtros {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .info-pagina-actual {
+    width: 100%;
+    text-align: center;
+    margin-left: 0;
+    margin-top: 0.5rem;
+  }
+}
 </style>
