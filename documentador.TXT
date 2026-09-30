@@ -831,4 +831,37 @@ Se implementaron las mejoras requeridas para optimizar el control técnico:
      * ¿Qué equipos están prestados? (Chips con Bien Nacional, Tipo y Modelo)
      * ¿Cuántos días serán? (Total de días, fechas límite y badge dinámico de días restantes o atraso)
      * Botón "Registrar devolución" directo para técnicos y coordinadores con modal de confirmación
-       y campo de observaciones de recepción. 
+       y campo de observaciones de recepción.
+
+======================================================================
+22. MÓDULO DE REPORTES PATRIMONIALES (ReportesView.vue)
+======================================================================
+
+Se implementó el Centro de Reportes y Auditoría Patrimonial con tres modalidades:
+
+1. Reporte General (Todas las Oficinas):
+   - Métricas globales de la institución (Total equipos, Operativos, En Reparación, Dañados/Bajas).
+   - Tabla de desglose de oficinas: muestra cuántos equipos tiene cada oficina, operativos,
+     en reparación, dañados y cantidad de custodios, con enlace directo para ver detalles.
+   - Resumen agrupado por tipo de bien (Computadoras, Laptops, Servidores, etc.).
+   - Listado consolidado de todos los equipos del inventario.
+
+2. Reporte de Equipos en una Sola Oficina:
+   - Selector dinámico de oficinas que indica cuántos equipos posee cada una.
+   - Resumen específico de la oficina: total de equipos, desglose por estado, tipos presentes
+     y lista de custodios responsables en esa oficina.
+   - Listado detallado de CUÁLES equipos tiene asignada la oficina seleccionada.
+
+3. Reporte de Equipos de un Solo Custodio:
+   - Selector dinámico de custodios que muestra cuántos equipos tiene a su cargo y en qué oficinas.
+   - Ficha patrimonial del custodio con conteo de equipos y estados.
+   - Listado detallado de CUÁLES equipos están bajo la responsabilidad de ese custodio.
+
+4. Exportación e Impresión Oficial:
+   - Impresión oficial institucional / Guardar en PDF (`window.print()`):
+     Membrete formal de Fundacite Sucre / Coordinación de Telemática, fecha y hora de emisión,
+     usuario emisor, formato de impresión optimizado y bloque con 3 firmas formales:
+     * Elaborado por (Técnico / Responsable)
+     * Revisado / Custodio receptor
+     * Aprobado por (Coordinación de Telemática)
+   - Exportación a CSV / Excel con codificación UTF-8 BOM para apertura nativa en Microsoft Excel. 

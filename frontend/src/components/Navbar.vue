@@ -46,6 +46,7 @@ onMounted(() => {
           {{ olvidadosCount }}
         </span>
       </RouterLink>
+      <RouterLink to="/reportes">Reportes</RouterLink>
       <RouterLink v-if="['TECNICO', 'COORDINADOR', 'SUPERADMIN'].includes(auth.rol)" to="/equipos/nuevo">
         Nuevo equipo
       </RouterLink>
